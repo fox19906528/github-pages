@@ -6,9 +6,11 @@
 </head>
 <body>
   <h2>每日工作日誌</h2>
+
   <div id="login-section">
-    <button id="login-btn">使用 Google 登入</button>
+    <button onclick="googleLogin()">使用 Google 登入</button>
   </div>
+
   <div id="form-section" style="display:none;">
     <p>登入帳號：<span id="user-email"></span></p>
     <form id="log-form">
@@ -24,69 +26,86 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    const CLIENT_ID = '221823460437-oln0e74h1e4hg1m7lqb2l06ava7b7nn0.apps.googleusercontent.com';
-    const API_URL = 'https://script.google.com/macros/s/AKfycby9-9bVgmnOyseeDllN9J1GUpyFh7cBH4dc1--2QIIyvvBTX2aCTvl_rd8zguXjkeiUiA/exec';
-
     let userEmail = '';
 
-    window.onload = () => {
+    const CLIENT_ID = '221823460437-oln0e74h1e4hg1m7lqb2l06ava7b7nn0.apps.googleusercontent.com';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxvg2Q5pkQGF3jUAtKAXqF6DNs5oLPD0Ml-x16YKLDRBV64XciMOcawJxbx7Ka8dwib6g/exec';
+
+    function googleLogin() {
       google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: handleCredentialResponse
       });
-    };
-
-    document.getElementById("login-btn").addEventListener("click", () => {
-      google.accounts.id.prompt((notif) => {
-        if (notif.isNotDisplayed() || notif.isSkippedMoment())
-          alert("登入視窗未出現，請確認彈出視窗未被阻擋");
-      });
-    });
+      google.accounts.id.prompt();
+    }
 
     function parseJwt(token) {
-      const base64Url = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(atob(base64Url));
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
     }
 
     function handleCredentialResponse(response) {
       const data = parseJwt(response.credential);
       userEmail = data.email;
+
       if (userEmail !== "b0962161@gmail.com") {
         alert("未授權的使用者：" + userEmail);
         return;
       }
+
       document.getElementById("login-section").style.display = "none";
       document.getElementById("form-section").style.display = "block";
       document.getElementById("user-email").innerText = userEmail;
       document.getElementById("date").valueAsDate = new Date();
     }
 
-    document.getElementById("log-form").addEventListener("submit", async e => {
+    document.getElementById("log-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      document.getElementById("result").innerText = "上傳中...";
-      const form = e.target;
+      document.getElementById("result").innerText = "上傳中，請稍候...";
+
+      const name = document.getElementById("name").value;
+      const date = document.getElementById("date").value;
+      const content = document.getElementById("content").value;
+      const note = document.getElementById("note").value;
+      const filesInput = document.getElementById("files").files;
+
       const files = [];
-      for (let file of form.files.files) {
-        const buf = await file.arrayBuffer();
-        files.push({ name: file.name, type: file.type, data: btoa(String.fromCharCode(...new Uint8Array(buf))) });
+      for (let file of filesInput) {
+        const reader = await file.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(reader)));
+        files.push({
+          name: file.name,
+          type: file.type,
+          data: base64
+        });
       }
+
       const body = {
-        name: form.name.value,
-        date: form.date.value,
-        content: form.content.value,
-        note: form.note.value,
+        name,
+        date,
+        content,
+        note,
         email: userEmail,
         files
       };
+
       try {
         const res = await fetch(API_URL, {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify(body)
         });
-        document.getElementById("result").innerText = await res.text();
-      } catch(err) {
-        document.getElementById("result").innerText = "錯誤：" + err.message;
+
+        const result = await res.text();
+        document.getElementById("result").innerText = result;
+      } catch (err) {
+        document.getElementById("result").innerText = "上傳失敗：" + err.message;
       }
     });
   </script>
