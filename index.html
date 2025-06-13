@@ -26,10 +26,9 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    let userEmail = '';
-
     const CLIENT_ID = '221823460437-oln0e74h1e4hg1m7lqb2l06ava7b7nn0.apps.googleusercontent.com';
-    const API_URL = 'https://script.google.com/macros/s/AKfycby3w6KPys4GCWFz-_7kSB4f3FTgF_N7roFiuJzAWpMCEC_3utQWTd5IvVwthJGIPE_0Ew/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycby3w6KPys4GCWFz-_7kSB4f3FTgF_N7roFiuJzAWpMCEC_3utQWTd5IvVwthJGIPE_0Ew/exec'; // ← 換成你的 Apps Script URL
+    let userEmail = '';
 
     function googleLogin() {
       google.accounts.id.initialize({
@@ -40,11 +39,10 @@
     }
 
     function parseJwt(token) {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
       return JSON.parse(jsonPayload);
     }
 
@@ -77,31 +75,17 @@
       for (let file of filesInput) {
         const reader = await file.arrayBuffer();
         const base64 = btoa(String.fromCharCode(...new Uint8Array(reader)));
-        files.push({
-          name: file.name,
-          type: file.type,
-          data: base64
-        });
+        files.push({ name: file.name, type: file.type, data: base64 });
       }
 
-      const body = {
-        name,
-        date,
-        content,
-        note,
-        email: userEmail,
-        files
-      };
+      const body = { name, date, content, note, email: userEmail, files };
 
       try {
         const res = await fetch(API_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-
         const result = await res.text();
         document.getElementById("result").innerText = result;
       } catch (err) {
