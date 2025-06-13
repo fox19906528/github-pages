@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>每日工作日誌</title>
+  <title>每日工作日誌（公開測試）</title>
 </head>
 <body>
   <h2>每日工作日誌</h2>
@@ -26,9 +26,10 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    const CLIENT_ID = '221823460437-oln0e74h1e4hg1m7lqb2l06ava7b7nn0.apps.googleusercontent.com';
-    const API_URL = 'https://script.google.com/macros/s/AKfycby3w6KPys4GCWFz-_7kSB4f3FTgF_N7roFiuJzAWpMCEC_3utQWTd5IvVwthJGIPE_0Ew/exec'; // ← 換成你的 Apps Script URL
     let userEmail = '';
+
+    const CLIENT_ID = '221823460437-oln0e74h1e4hg1m7lqb2l06ava7b7nn0.apps.googleusercontent.com';
+    const API_URL = 'https://script.google.com/macros/s/AKfycby3w6KPys4GCWFz-_7kSB4f3FTgF_N7roFiuJzAWpMCEC_3utQWTd5IvVwthJGIPE_0Ew/exec';
 
     function googleLogin() {
       google.accounts.id.initialize({
@@ -39,7 +40,8 @@
     }
 
     function parseJwt(token) {
-      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
         '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
       ).join(''));
@@ -49,11 +51,6 @@
     function handleCredentialResponse(response) {
       const data = parseJwt(response.credential);
       userEmail = data.email;
-
-      if (userEmail !== "b0962161@gmail.com") {
-        alert("未授權的使用者：" + userEmail);
-        return;
-      }
 
       document.getElementById("login-section").style.display = "none";
       document.getElementById("form-section").style.display = "block";
